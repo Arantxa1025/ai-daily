@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { createFallbackLesson } from "./fallbackHotspot";
+import {
+  advanceFallbackProgress,
+  createFallbackLesson,
+  pickTopicIndex,
+  readFallbackProgress,
+} from "./fallbackHotspot";
 import { chatJson } from "./llm";
 import { writeLesson } from "./lessonStore";
 import { fetchHotspotCandidates, type HotspotCandidate } from "./rss";
@@ -127,11 +132,15 @@ export async function generateAfternoonLesson(
     }
   }
 
-  const fallback = createFallbackLesson(date, createdAt);
+  const progress = await readFallbackProgress();
+  const fallback = createFallbackLesson(date, pickTopicIndex(progress), createdAt);
   const validation = validateLesson(fallback);
   if (!validation.ok) {
     fallback.status = "draft_quality";
   }
-  await deps.writeLesson(fallback);
+  const result = await deps.writeLesson(fallback);
+  if (result === "written") {
+    await advanceFallbackProgress(progress);
+  }
   return fallback;
 }

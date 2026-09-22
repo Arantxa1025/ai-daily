@@ -1,3 +1,5 @@
+import fs from "fs/promises";
+import path from "path";
 import fallbackTopics from "../../content/fallback-topics.json";
 import type { Lesson, LessonType } from "./types";
 
@@ -8,14 +10,58 @@ interface FallbackTopic {
   action: string;
 }
 
-const DISCLAIMER = "根据公开信息整理，非投资/内幕建议；今日资讯源或生成服务异常，本文为经典主题降级内容。";
-
-function topicIndex(date: string): number {
-  return [...date].reduce((sum, char) => sum + char.charCodeAt(0), 0) % fallbackTopics.length;
+export interface FallbackProgress {
+  nextIndex: number;
 }
 
-export function createFallbackLesson(date: string, createdAt = new Date().toISOString()): Lesson {
-  const topic = fallbackTopics[topicIndex(date)] as FallbackTopic;
+const DISCLAIMER =
+  "根据公开信息整理，非投资/内幕建议；今日资讯源或生成服务异常，本文为经典主题降级内容。";
+
+function contentRoot(): string {
+  return process.env.CONTENT_ROOT ?? path.join(process.cwd(), "content");
+}
+
+function fallbackProgressPath(): string {
+  return path.join(contentRoot(), "fallback-progress.json");
+}
+
+export function pickTopicIndex(progress: FallbackProgress): number {
+  return progress.nextIndex % fallbackTopics.length;
+}
+
+export async function readFallbackProgress(): Promise<FallbackProgress> {
+  try {
+    const progress = JSON.parse(
+      await fs.readFile(fallbackProgressPath(), "utf-8"),
+    ) as FallbackProgress;
+    if (!Number.isInteger(progress.nextIndex) || progress.nextIndex < 0) {
+      throw new Error("fallback-progress.json 中的 nextIndex 必须是非负整数");
+    }
+    return progress;
+  } catch (err: unknown) {
+    if (err && typeof err === "object" && "code" in err && err.code === "ENOENT") {
+      return { nextIndex: 0 };
+    }
+    throw err;
+  }
+}
+
+export async function advanceFallbackProgress(progress: FallbackProgress): Promise<void> {
+  const nextIndex = (progress.nextIndex + 1) % fallbackTopics.length;
+  await fs.mkdir(contentRoot(), { recursive: true });
+  await fs.writeFile(
+    fallbackProgressPath(),
+    `${JSON.stringify({ nextIndex }, null, 2)}\n`,
+    "utf-8",
+  );
+}
+
+export function createFallbackLesson(
+  date: string,
+  topicIndex: number,
+  createdAt = new Date().toISOString(),
+): Lesson {
+  const topic = fallbackTopics[topicIndex % fallbackTopics.length] as FallbackTopic;
   const { subject, action } = topic;
 
   return {
