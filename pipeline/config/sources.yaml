@@ -1,0 +1,20 @@
+hotspot:
+  max_age_hours: 48
+  per_source_limit: 6
+  sources:
+    - name: DeepMind Blog
+      type: rss
+      url: https://deepmind.google/blog/rss.xml
+      enabled: true
+    - name: TechCrunch AI
+      type: rss
+      url: https://techcrunch.com/category/artificial-intelligence/feed/
+      enabled: true
+    - name: OpenAI Blog
+      type: rss
+      url: https://openai.com/blog/rss.xml
+      enabled: true
+    - name: Google AI Blog
+      type: rss
+      url: https://blog.google/technology/ai/rss/
+      enabled: true

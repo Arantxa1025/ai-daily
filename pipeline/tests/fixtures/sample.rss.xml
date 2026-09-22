@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Sample Test Feed</title>
+    <item>
+      <title>Recent Article</title>
+      <link>https://example.com/recent</link>
+      <description>Summary of a recent post.</description>
+      <pubDate>Sun, 21 Sep 2026 12:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Old Article</title>
+      <link>https://example.com/old</link>
+      <description>Summary of an old post.</description>
+      <pubDate>Mon, 15 Sep 2026 12:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Recent Two</title>
+      <link>https://example.com/recent-2</link>
+      <description>Second recent post.</description>
+      <pubDate>Sun, 21 Sep 2026 18:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Recent Three</title>
+      <link>https://example.com/recent-3</link>
+      <description>Third recent post.</description>
+      <pubDate>Sun, 21 Sep 2026 06:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Recent Four</title>
+      <link>https://example.com/recent-4</link>
+      <description>Fourth recent post.</description>
+      <pubDate>Sun, 21 Sep 2026 03:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Recent Five</title>
+      <link>https://example.com/recent-5</link>
+      <description>Fifth recent post.</description>
+      <pubDate>Sun, 21 Sep 2026 01:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Recent Six</title>
+      <link>https://example.com/recent-6</link>
+      <description>Sixth recent post.</description>
+      <pubDate>Sun, 20 Sep 2026 22:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Recent Seven</title>
+      <link>https://example.com/recent-7</link>
+      <description>Seventh recent post (over limit).</description>
+      <pubDate>Sun, 20 Sep 2026 20:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>
