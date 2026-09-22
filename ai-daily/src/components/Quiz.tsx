@@ -20,7 +20,6 @@ function QuizQuestion({ item, index }: { item: QuizItem; index: number }) {
           const isChosen = selected === optionIndex;
           const classNames = [
             "quiz-option",
-            isChosen ? "is-selected" : "",
             selected !== null && optionIndex === item.answerIndex ? "is-answer" : "",
             isChosen && !isCorrect ? "is-wrong" : "",
           ]

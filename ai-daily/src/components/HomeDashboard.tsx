@@ -81,8 +81,9 @@ export default function HomeDashboard({
               <span className="section-kicker">{waitingBeforeMorning ? "下一更" : "更新稍迟"}</span>
               <h2>{waitingBeforeMorning ? "早上七点半，我们一起开课" : "这一更还在路上"}</h2>
               <p>
-                {recommendation.nextUpdateLabel ??
-                  `${slotCopy[recommendation.primary!].eyebrow}暂未更新，请稍后再来。`}
+                {waitingBeforeMorning
+                  ? recommendation.nextUpdateLabel
+                  : `${slotCopy[recommendation.primary!].eyebrow}暂未更新，请稍后再来。`}
               </p>
             </div>
           )}
