@@ -1,7 +1,7 @@
 # Python 定时生成 + GitHub Pages 更新 — 设计规格
 
 **日期：** 2026-09-22  
-**状态：** 已确认；实现计划见 `docs/superpowers/plans/2026-09-22-python-daily-pipeline.md`  
+**状态：** 已实现（待配置 GitHub Secret 并完成线上手动验收）；实现计划见 `docs/superpowers/plans/2026-09-22-python-daily-pipeline.md`
 **关联：** 现有静态站 `ai-daily/`（GitHub Pages：https://arantxa1025.github.io/ai-daily/）
 
 ## 1. 目标

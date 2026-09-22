@@ -157,8 +157,10 @@ def test_afternoon_skip_existing_ok_does_not_advance_fallback(content_tmp):
 
     _, result = generate_afternoon(
         "2026-09-22",
-        chat_json=lambda _system, _user: pytest.fail("不应调用"),
-        fetch_candidates=lambda: [],
+        chat_json=lambda _system, _user: pytest.fail("已有 ok 稿时不应调用 LLM"),
+        fetch_candidates=lambda: [
+            {"title": "新闻", "url": "https://example.com", "summary": "摘要"}
+        ],
     )
 
     assert result == "skipped_existing_ok"

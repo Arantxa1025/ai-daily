@@ -11,19 +11,50 @@
 - **早上 7:30 后**：首页点「今日基础」
 - **下午 5:30 后**：首页点「今日热点」
 
-### 更新内容（电脑上）
+### 自动生成时间
+
+GitHub Actions 使用 UTC cron，并按上海时间生成当天课程：
+
+- 每天 **07:30** 运行 `morning`（UTC `30 23 * * *`）
+- 每天 **17:30** 运行 `afternoon`（UTC `30 9 * * *`）
+
+GitHub 的定时任务可能有几分钟延迟。工作流生成 JSON 并提交后，Pages 会自动重新发布。
+
+## 首次配置自动生成
+
+1. 打开仓库 **Settings → Secrets and variables → Actions**。
+2. 新建必填 Secret `MINIMAX_API_KEY`。
+3. 可选添加 `MINIMAX_BASE_URL` 和 `MINIMAX_MODEL`；未添加时分别使用
+   `https://api.minimaxi.com/v1` 和 `MiniMax-M3`。
+4. 将工作流合并到默认分支后，打开 **Actions → Daily Generate Lessons → Run workflow**，
+   先选择 `morning` 手动运行一次并确认成功。
+
+未配置 `MINIMAX_API_KEY` 时，工作流会失败并在日志中明确提示。GitHub 仅在默认分支上自动执行定时工作流。
+
+## 手动触发或本地生成
+
+GitHub 中可打开 **Actions → Daily Generate Lessons → Run workflow**，选择
+`morning` 或 `afternoon`。本地也可以运行 Python 流水线：
 
 ```bash
-cd ai-daily
-npx tsx scripts/generate.ts morning    # 需配置 .env.local 里的 LLM_API_KEY
-npx tsx scripts/generate.ts afternoon
-cd ..
-git add ai-daily/content
-git commit -m "content: update daily lessons"
-git push
+pip install -r pipeline/requirements.txt
+export MINIMAX_API_KEY="<你的密钥>"
+python pipeline/run.py morning
+python pipeline/run.py afternoon
 ```
 
-推送后 GitHub Actions 会自动重新发布，一两分钟后手机刷新即可。
+课程日期按 `Asia/Shanghai`。已有 `ok` 稿会直接跳过，不调用模型，也不会推进课程或 fallback 进度。
+
+## 修改热点来源
+
+编辑仓库根目录的 `pipeline/config/sources.yaml`：
+
+- 修改 `url` 可替换 RSS 来源；
+- 设置 `enabled: false` 可临时停用来源；
+- `max_age_hours` 控制资讯时效范围；
+- `per_source_limit` 控制每个来源最多保留的条数。
+
+提交并推送配置后，下次 `afternoon` 任务即会生效。单个来源抓取失败不会阻断其他来源。
 
 ## 零基础本地预览
 
@@ -40,22 +71,9 @@ npm run dev
 
 本地开发不加 `BASE_PATH`；线上 GitHub Pages 使用 `/ai-daily` 前缀。
 
-## 手动生成课程
-
-```bash
-cd ai-daily
-cp .env.example .env.local   # 填入 LLM_API_KEY
-npx tsx scripts/generate.ts morning
-npx tsx scripts/generate.ts afternoon
-```
-
-课程日期按 `Asia/Shanghai`。已有 `ok` 稿不会被覆盖。大纲 60 天用尽后需扩展 `content/curriculum.json`。
-
 ## 发布到 GitHub Pages
 
 1. 把本仓库推到 GitHub（公开仓库最简单）。
 2. 打开仓库 **Settings → Pages → Build and deployment**，Source 选 **GitHub Actions**。
 3. 推送 `master`/`main` 后查看 **Actions** 是否绿色。
 4. 用手机打开 `https://<用户名>.github.io/ai-daily/`。
-
-> 当前为静态网站：不在线上自动写稿。生成请在本地完成后再 `git push`。

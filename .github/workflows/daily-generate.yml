@@ -1,0 +1,61 @@
+name: Daily Generate Lessons
+
+on:
+  schedule:
+    - cron: "30 23 * * *" # 上海时间 07:30
+    - cron: "30 9 * * *" # 上海时间 17:30
+  workflow_dispatch:
+    inputs:
+      slot:
+        description: morning or afternoon
+        required: true
+        default: morning
+        type: choice
+        options:
+          - morning
+          - afternoon
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r pipeline/requirements.txt
+      - name: Resolve slot
+        id: slot
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ inputs.slot }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "30 23 * * *" ]; then
+            echo "value=morning" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=afternoon" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Generate
+        env:
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+          MINIMAX_BASE_URL: ${{ secrets.MINIMAX_BASE_URL }}
+          MINIMAX_MODEL: ${{ secrets.MINIMAX_MODEL }}
+        run: |
+          : "${MINIMAX_API_KEY:?请先在 GitHub Actions Secrets 中配置 MINIMAX_API_KEY}"
+          export MINIMAX_BASE_URL="${MINIMAX_BASE_URL:-https://api.minimaxi.com/v1}"
+          export MINIMAX_MODEL="${MINIMAX_MODEL:-MiniMax-M3}"
+          python pipeline/run.py "${{ steps.slot.outputs.value }}"
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ai-daily/content/lessons ai-daily/content/progress.json ai-daily/content/fallback-progress.json || true
+          if git diff --staged --quiet; then
+            echo "No content changes"
+            exit 0
+          fi
+          git commit -m "content: auto ${{ steps.slot.outputs.value }} $(TZ=Asia/Shanghai date +%F)"
+          git push

@@ -10,7 +10,7 @@ from src.fallback import (
 from src.fetch_sources import fetch_hotspot_candidates
 from src.llm_minimax import chat_json as default_chat_json
 from src.models import Lesson
-from src.store import WriteResult, write_lesson
+from src.store import WriteResult, read_lesson, write_lesson
 from src.validate import validate_lesson
 
 ChatJson = Callable[[str, str], dict]
@@ -145,6 +145,10 @@ def generate_afternoon(
     chat_json: ChatJson = default_chat_json,
     fetch_candidates: FetchCandidates = fetch_hotspot_candidates,
 ) -> tuple[Lesson, WriteResult]:
+    existing = read_lesson(date, "afternoon")
+    if existing is not None and existing.get("status") == "ok":
+        return existing, "skipped_existing_ok"
+
     try:
         candidates = fetch_candidates()
     except Exception:

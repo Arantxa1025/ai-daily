@@ -4,7 +4,7 @@ from typing import Callable
 from src.curriculum import get_topic_for_day, read_progress, write_progress
 from src.llm_minimax import chat_json as default_chat_json
 from src.models import Lesson
-from src.store import WriteResult, write_lesson
+from src.store import WriteResult, read_lesson, write_lesson
 from src.validate import validate_lesson
 
 ChatJson = Callable[[str, str], dict]
@@ -102,6 +102,10 @@ def _build_lesson(raw: dict, date: str, day: int) -> Lesson:
 def generate_morning(
     date: str, *, chat_json: ChatJson = default_chat_json
 ) -> tuple[Lesson, WriteResult]:
+    existing = read_lesson(date, "morning")
+    if existing is not None and existing.get("status") == "ok":
+        return existing, "skipped_existing_ok"
+
     progress = read_progress()
     topic = get_topic_for_day(progress["nextDay"])
     if topic is None:

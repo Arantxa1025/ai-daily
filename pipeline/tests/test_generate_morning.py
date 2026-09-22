@@ -99,7 +99,8 @@ def test_morning_skip_existing_ok_does_not_advance(content_tmp):
     )
 
     _, result = generate_morning(
-        "2026-09-22", chat_json=lambda _system, _user: generated(1500)
+        "2026-09-22",
+        chat_json=lambda _system, _user: pytest.fail("已有 ok 稿时不应调用 LLM"),
     )
 
     assert result == "skipped_existing_ok"
