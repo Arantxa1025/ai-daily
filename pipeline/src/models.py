@@ -1,4 +1,11 @@
-from typing import Literal, NotRequired, TypedDict
+from __future__ import annotations
+
+from typing import Literal, TypedDict
+
+try:
+    from typing import NotRequired
+except ImportError:  # Python < 3.11
+    from typing_extensions import NotRequired  # type: ignore
 
 LessonSlot = Literal["morning", "afternoon"]
 LessonType = Literal["basics", "hotspot", "fallback_classic", "fallback_tool"]

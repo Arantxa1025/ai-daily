@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from src.models import Lesson
 
 _DISCLAIMER_TYPES = frozenset({"hotspot", "fallback_classic", "fallback_tool"})
