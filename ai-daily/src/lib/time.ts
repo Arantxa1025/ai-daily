@@ -44,8 +44,8 @@ export function getRecommendedSlot(now = new Date()) {
   if (minutes < morningAt) {
     return {
       date,
-      primary: null as const,
-      secondary: null as const,
+      primary: null,
+      secondary: null,
       nextUpdateLabel: "今日基础预计 07:30 更新",
       yesterday,
     };
