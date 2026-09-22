@@ -1,54 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI 每日学习站
 
-## Getting Started
+每天按上海时间 07:30 生成 AI 基础课，17:30 生成 AI 热点课。项目使用 Next.js，并通过带密钥保护的 Cron 接口触发生成。
 
-First, run the development server:
+## 零基础本地运行清单
+
+1. 从 [Node.js 官网](https://nodejs.org/) 安装 Node.js 20 LTS 或更高版本。
+2. 在终端进入本项目目录并安装依赖：
+
+```bash
+cd ai-daily
+npm install
+```
+
+3. 复制环境变量模板：
+
+```bash
+cp .env.example .env.local
+```
+
+4. 打开 `.env.local`，至少填写 `LLM_API_KEY`，并把 `CRON_SECRET` 改成一段无法猜到的随机字符串。兼容 OpenAI 的其他服务还需按服务商说明修改 `LLM_BASE_URL` 和 `LLM_MODEL`。
+5. 启动开发服务器：
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+6. 浏览器打开 [http://localhost:3000](http://localhost:3000)。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 手动生成课程
 
-## 生成早间课程
-
-项目使用兼容 OpenAI Chat Completions 的大模型接口。先配置服务端环境变量：
-
-```bash
-export LLM_API_KEY="你的 API 密钥"
-export LLM_BASE_URL="https://你的接口地址/v1"
-export LLM_MODEL="模型名称" # 可选，默认 gpt-4o-mini
-```
-
-在项目根目录手动生成当天（Asia/Shanghai）的早间基础课：
+在项目根目录执行：
 
 ```bash
 npx tsx scripts/generate.ts morning
+npx tsx scripts/generate.ts afternoon
 ```
 
-生成器读取 `content/progress.json` 对应的大纲主题，质量校验失败会重试一次。最终可读稿成功写入后才推进 `nextDay`；已有 `ok` 稿不会被覆盖，也不会推进课程进度。下午热点命令入口已预留，将由后续任务实现。
+课程日期始终按 `Asia/Shanghai` 计算。已有 `ok` 稿不会被覆盖。
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 验证 Cron 接口
 
-## Learn More
+未提供密钥时应返回 `401`：
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+curl -i "http://localhost:3000/api/cron/generate?slot=morning"
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+使用 `.env.local` 中相同的 `CRON_SECRET` 可触发生成：
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+curl -i -H "Authorization: Bearer 你的CRON_SECRET" \
+  "http://localhost:3000/api/cron/generate?slot=morning"
+```
 
-## Deploy on Vercel
+也可以把 `slot` 改成 `afternoon`，或使用相同 URL 发送 `POST` 请求。
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 零基础 Vercel 部署清单
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. 把代码推送到 GitHub。
+2. 登录 [Vercel](https://vercel.com/)，选择 **Add New → Project**，导入代码仓库；如果仓库根目录不是本项目，将 **Root Directory** 设为 `ai-daily`。
+3. 在项目 **Settings → Environment Variables** 中逐项添加 `.env.example` 里的变量；`LLM_API_KEY` 和 `CRON_SECRET` 必须填写真实值，且不要提交到 Git。
+4. 点击 **Deploy**。`vercel.json` 会配置两次 UTC 定时任务：`23:30` 触发次日上海早课，`09:30` 触发当日上海热点课。
+5. 部署后在 **Settings → Cron Jobs** 确认两条任务存在，并在 **Logs** 查看首次运行结果。
+
+> 注意：当前 MVP 把课程写入本地 JSON。Vercel 函数文件系统不能作为持久化内容库；正式线上自动生成前，需要把课程和进度存储替换为托管数据库或对象存储。本地运行不受此限制。

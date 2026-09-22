@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/generate?slot=morning",
+      "schedule": "30 23 * * *"
+    },
+    {
+      "path": "/api/cron/generate?slot=afternoon",
+      "schedule": "30 9 * * *"
+    }
+  ]
+}
