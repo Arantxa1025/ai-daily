@@ -4,6 +4,7 @@ import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import fallbackTopics from "../../content/fallback-topics.json";
 import { generateAfternoonLesson } from "./generateAfternoon";
+import { writeLesson } from "./lessonStore";
 import { validateLesson } from "./validateLesson";
 
 function generatedHotspot({ introLength = 500 }: { introLength?: number } = {}) {
@@ -154,6 +155,41 @@ describe("generateAfternoonLesson", () => {
     expect(
       JSON.parse(await fs.readFile(path.join(contentRoot, "fallback-progress.json"), "utf-8")),
     ).toEqual({ nextIndex: 2 });
+    await fs.rm(lessonRoot, { recursive: true, force: true });
+  });
+
+  it("已有 ok 下午课时跳过降级稿且不推进 nextIndex", async () => {
+    const lessonRoot = await fs.mkdtemp(path.join(os.tmpdir(), "afternoon-"));
+    process.env.LESSON_ROOT = lessonRoot;
+    const date = "2026-09-29";
+    const existing = {
+      ...generatedHotspot(),
+      date,
+      slot: "afternoon" as const,
+      status: "ok" as const,
+      createdAt: "2026-09-29T08:00:00.000Z",
+    };
+    await writeLesson(existing);
+    const writeResults: string[] = [];
+
+    await generateAfternoonLesson(date, {
+      fetchCandidates: vi.fn().mockResolvedValue([]),
+      chatJson: vi.fn(),
+      writeLesson: async (lesson) => {
+        const result = await writeLesson(lesson);
+        writeResults.push(result);
+        return result;
+      },
+      now: () => new Date("2026-09-29T09:30:00.000Z"),
+    });
+
+    expect(writeResults).toEqual(["skipped_existing_ok"]);
+    expect(
+      JSON.parse(await fs.readFile(path.join(contentRoot, "fallback-progress.json"), "utf-8")),
+    ).toEqual({ nextIndex: 0 });
+    expect(
+      JSON.parse(await fs.readFile(path.join(lessonRoot, `${date}-afternoon.json`), "utf-8")),
+    ).toEqual(existing);
     await fs.rm(lessonRoot, { recursive: true, force: true });
   });
 
