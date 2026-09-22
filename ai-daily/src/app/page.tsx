@@ -1,12 +1,9 @@
-import HomeDashboard from "@/components/HomeDashboard";
+import HomeClient, { type LessonCatalog } from "@/components/HomeClient";
 import type { HistoryEntry } from "@/components/HistoryList";
 import { listRecentDates, readLesson } from "@/lib/lessonStore";
-import { getRecommendedSlot } from "@/lib/time";
-import type { Lesson, LessonSlot } from "@/lib/types";
+import type { LessonSlot } from "@/lib/types";
 
-export const dynamic = "force-dynamic";
-
-async function lessonsFor(date: string): Promise<Partial<Record<LessonSlot, Lesson>>> {
+async function lessonsFor(date: string) {
   const [morning, afternoon] = await Promise.all([
     readLesson(date, "morning"),
     readLesson(date, "afternoon"),
@@ -19,29 +16,21 @@ async function lessonsFor(date: string): Promise<Partial<Record<LessonSlot, Less
 }
 
 export default async function Home() {
-  const recommendation = getRecommendedSlot();
-  const [todayLessons, yesterdayLessons, recentDates] = await Promise.all([
-    lessonsFor(recommendation.date),
-    lessonsFor(recommendation.yesterday),
-    listRecentDates(8),
-  ]);
+  const recentDates = await listRecentDates(60);
+  const catalog: LessonCatalog = {};
 
-  const history: HistoryEntry[] = await Promise.all(
+  await Promise.all(
     recentDates.map(async (date) => {
-      const lessons = await lessonsFor(date);
-      return {
-        date,
-        slots: (["morning", "afternoon"] as LessonSlot[]).filter((slot) => lessons[slot]),
-      };
+      catalog[date] = await lessonsFor(date);
     }),
   );
 
-  return (
-    <HomeDashboard
-      history={history.filter((entry) => entry.slots.length > 0)}
-      recommendation={recommendation}
-      todayLessons={todayLessons}
-      yesterdayLessons={yesterdayLessons}
-    />
-  );
+  const history: HistoryEntry[] = recentDates
+    .map((date) => ({
+      date,
+      slots: (["morning", "afternoon"] as LessonSlot[]).filter((slot) => catalog[date]?.[slot]),
+    }))
+    .filter((entry) => entry.slots.length > 0);
+
+  return <HomeClient catalog={catalog} history={history} />;
 }
