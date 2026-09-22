@@ -1,6 +1,8 @@
 # AI 每日学习站
 
-每天按上海时间 07:30 生成 AI 基础课，17:30 生成 AI 热点课。项目使用 Next.js，并通过带密钥保护的 Cron 接口触发生成。
+每天提供 AI 基础课和热点课。当前 MVP 采用本地 JSON 存储，并保留带密钥保护的 Cron 接口供手动调用。
+
+> **线上暂不自动生成。** Vercel 的只读/临时文件系统不能持久保存课程和进度，因此 `vercel.json` 未启用 Cron。请在本地运行 `npx tsx scripts/generate.ts morning` 或 `npx tsx scripts/generate.ts afternoon`，再提交生成的 JSON 并部署；未来接入数据库或对象存储后再启用线上定时生成。
 
 ## 零基础本地运行清单
 
@@ -37,6 +39,7 @@ npx tsx scripts/generate.ts afternoon
 ```
 
 课程日期始终按 `Asia/Shanghai` 计算。已有 `ok` 稿不会被覆盖。
+基础课大纲目前为 60 天；结束后需先扩展 `content/curriculum.json`，否则生成器会给出明确错误并停止。
 
 ## 验证 Cron 接口
 
@@ -60,7 +63,7 @@ curl -i -H "Authorization: Bearer 你的CRON_SECRET" \
 1. 把代码推送到 GitHub。
 2. 登录 [Vercel](https://vercel.com/)，选择 **Add New → Project**，导入代码仓库；如果仓库根目录不是本项目，将 **Root Directory** 设为 `ai-daily`。
 3. 在项目 **Settings → Environment Variables** 中逐项添加 `.env.example` 里的变量；`LLM_API_KEY` 和 `CRON_SECRET` 必须填写真实值，且不要提交到 Git。
-4. 点击 **Deploy**。`vercel.json` 会配置两次 UTC 定时任务：`23:30` 触发次日上海早课，`09:30` 触发当日上海热点课。
-5. 部署后在 **Settings → Cron Jobs** 确认两条任务存在，并在 **Logs** 查看首次运行结果。
+4. 在本地生成课程 JSON，提交并推送后点击 **Deploy**。
+5. 部署后检查页面内容；当前不要在 **Cron Jobs** 中配置自动生成。
 
-> 注意：当前 MVP 把课程写入本地 JSON。Vercel 函数文件系统不能作为持久化内容库；正式线上自动生成前，需要把课程和进度存储替换为托管数据库或对象存储。本地运行不受此限制。
+> 再次提醒：当前 MVP 线上暂不自动生成。请执行“本地生成 → 提交课程 JSON → 部署”；未来接入持久化存储后再恢复 Vercel Cron。`/api/cron/generate` 路由仍保留，供本地或具备可写持久化环境的受保护手动调用。

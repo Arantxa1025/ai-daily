@@ -6,10 +6,6 @@ function getRoot(): string {
   return process.env.LESSON_ROOT ?? path.join(process.cwd(), "content/lessons");
 }
 
-export function lessonPath(date: string, slot: LessonSlot): string {
-  return `content/lessons/${date}-${slot}.json`;
-}
-
 function filePath(date: string, slot: LessonSlot): string {
   return path.join(getRoot(), `${date}-${slot}.json`);
 }

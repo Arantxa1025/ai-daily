@@ -19,11 +19,17 @@ async function handle(request: Request) {
 
   const date = formatShanghaiDate(new Date());
   try {
-    const writeResult =
+    const result =
       slot === "morning"
         ? await generateMorningLesson(date)
         : await generateAfternoonLesson(date);
-    return NextResponse.json({ ok: true, writeResult, date });
+    return NextResponse.json({
+      ok: true,
+      date,
+      slot,
+      writeResult: result.writeResult,
+      status: result.lesson.status,
+    });
   } catch (error) {
     console.error(`生成 ${date} ${slot} 课程失败`, error);
     return NextResponse.json(

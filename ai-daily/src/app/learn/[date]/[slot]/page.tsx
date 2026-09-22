@@ -18,11 +18,11 @@ function validDate(date: string) {
 
 export async function generateMetadata({ params }: LessonPageProps): Promise<Metadata> {
   const { date, slot } = await params;
-  if (!validDate(date) || !validSlot(slot)) return { title: "这一更还没好 · AI 每日" };
+  if (!validDate(date) || !validSlot(slot)) return { title: "这一更还没好" };
 
   const lesson = await readLesson(date, slot);
   return {
-    title: lesson ? `${lesson.title} · AI 每日` : "这一更还没好 · AI 每日",
+    title: lesson?.title ?? "这一更还没好",
     description: lesson?.intro.slice(0, 100),
   };
 }

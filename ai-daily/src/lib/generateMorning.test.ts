@@ -43,13 +43,14 @@ describe("generateMorningLesson", () => {
       .mockResolvedValueOnce(generated(100))
       .mockResolvedValueOnce(generated(1500));
 
-    const lesson = await generateMorningLesson("2026-09-22", {
+    const { lesson, writeResult } = await generateMorningLesson("2026-09-22", {
       chatJson: chat,
       writeLesson: vi.fn().mockResolvedValue("written"),
       now: () => new Date("2026-09-22T00:00:00.000Z"),
     });
 
     expect(chat).toHaveBeenCalledTimes(2);
+    expect(writeResult).toBe("written");
     expect(lesson.status).toBe("ok");
     expect(lesson.curriculumDay).toBe(1);
     expect(JSON.parse(await fs.readFile(path.join(contentRoot, "progress.json"), "utf-8"))).toEqual({
@@ -58,11 +59,12 @@ describe("generateMorningLesson", () => {
   });
 
   it("二次校验仍失败时写入 draft_quality 并推进进度", async () => {
-    const lesson = await generateMorningLesson("2026-09-22", {
+    const { lesson, writeResult } = await generateMorningLesson("2026-09-22", {
       chatJson: vi.fn().mockResolvedValue(generated(100)),
       writeLesson: vi.fn().mockResolvedValue("written"),
     });
 
+    expect(writeResult).toBe("written");
     expect(lesson.status).toBe("draft_quality");
     expect(JSON.parse(await fs.readFile(path.join(contentRoot, "progress.json"), "utf-8")).nextDay).toBe(
       2,
@@ -70,13 +72,22 @@ describe("generateMorningLesson", () => {
   });
 
   it("已有 ok 稿导致跳过写入时不推进进度", async () => {
-    await generateMorningLesson("2026-09-22", {
+    const { writeResult } = await generateMorningLesson("2026-09-22", {
       chatJson: vi.fn().mockResolvedValue(generated(1500)),
       writeLesson: vi.fn().mockResolvedValue("skipped_existing_ok"),
     });
 
+    expect(writeResult).toBe("skipped_existing_ok");
     expect(JSON.parse(await fs.readFile(path.join(contentRoot, "progress.json"), "utf-8")).nextDay).toBe(
       1,
+    );
+  });
+
+  it("课程大纲结束后给出明确的扩展提示", async () => {
+    await fs.writeFile(path.join(contentRoot, "progress.json"), '{ "nextDay": 61 }\n');
+
+    await expect(generateMorningLesson("2026-11-21")).rejects.toThrow(
+      "课程大纲已结束：找不到第 61 天内容，请扩展 content/curriculum.json 后再生成",
     );
   });
 });

@@ -4,11 +4,13 @@ export interface HotspotCandidate {
   title: string;
   url: string;
   summary?: string;
+  publishedAt: string;
 }
 
 export interface FetchHotspotOptions {
   sources?: string[];
   fetchImpl?: typeof fetch;
+  now?: Date;
 }
 
 const DEFAULT_SOURCES = [
@@ -65,6 +67,13 @@ function atomUrl(link: unknown): string | undefined {
   return undefined;
 }
 
+function parsePublishedAt(item: Record<string, unknown>): string | undefined {
+  const raw = text(item.pubDate) ?? text(item.updated) ?? text(item.published);
+  if (!raw) return undefined;
+  const timestamp = Date.parse(raw);
+  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : undefined;
+}
+
 function parseFeed(xml: string): HotspotCandidate[] {
   const document = parser.parse(xml) as {
     rss?: { channel?: { item?: unknown } };
@@ -80,11 +89,12 @@ function parseFeed(xml: string): HotspotCandidate[] {
     const item = entry as Record<string, unknown>;
     const title = text(item.title);
     const url = text(item.link) ?? atomUrl(item.link);
-    if (!title || !url) return [];
+    const publishedAt = parsePublishedAt(item);
+    if (!title || !url || !publishedAt) return [];
     const summary = stripHtml(
       text(item.description) ?? text(item.summary) ?? text(item.content),
     );
-    return [{ title, url, ...(summary ? { summary } : {}) }];
+    return [{ title, url, publishedAt, ...(summary ? { summary } : {}) }];
   });
 }
 
@@ -99,6 +109,8 @@ export async function fetchHotspotCandidates(
   options: FetchHotspotOptions = {},
 ): Promise<HotspotCandidate[]> {
   const fetchImpl = options.fetchImpl ?? fetch;
+  const now = (options.now ?? new Date()).getTime();
+  const recentCutoff = now - 48 * 60 * 60 * 1000;
   const sourceResults = await Promise.all(
     (options.sources ?? configuredSources()).map(async (source) => {
       try {
@@ -107,7 +119,13 @@ export async function fetchHotspotCandidates(
           signal: AbortSignal.timeout(10_000),
         });
         if (!response.ok) return [];
-        return parseFeed(await response.text());
+        return parseFeed(await response.text())
+          .filter((candidate) => {
+            const publishedAt = Date.parse(candidate.publishedAt);
+            return publishedAt >= recentCutoff && publishedAt <= now;
+          })
+          .sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt))
+          .slice(0, 6);
       } catch {
         return [];
       }
@@ -115,8 +133,14 @@ export async function fetchHotspotCandidates(
   );
 
   const unique = new Map<string, HotspotCandidate>();
-  sourceResults.flat().forEach((candidate) => {
-    if (!unique.has(candidate.url)) unique.set(candidate.url, candidate);
-  });
+  const longestSource = Math.max(0, ...sourceResults.map((result) => result.length));
+  for (let index = 0; index < longestSource; index += 1) {
+    for (const sourceResult of sourceResults) {
+      const candidate = sourceResult[index];
+      if (candidate && !unique.has(candidate.url)) {
+        unique.set(candidate.url, candidate);
+      }
+    }
+  }
   return [...unique.values()];
 }

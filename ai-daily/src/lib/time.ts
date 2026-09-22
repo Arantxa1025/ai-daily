@@ -27,13 +27,6 @@ export function addDays(dateStr: string, delta: number): string {
   return utc.toISOString().slice(0, 10);
 }
 
-export function getShanghaiNow(date = new Date()) {
-  return {
-    date: formatShanghaiDate(date),
-    minutes: shanghaiMinutesSinceMidnight(date),
-  };
-}
-
 export function getRecommendedSlot(now = new Date()) {
   const date = formatShanghaiDate(now);
   const minutes = shanghaiMinutesSinceMidnight(now);

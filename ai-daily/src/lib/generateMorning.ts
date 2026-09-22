@@ -105,12 +105,17 @@ function userPrompt(day: number, title: string, bullets: string[], retryReasons?
 export async function generateMorningLesson(
   date: string,
   dependencies: Partial<GenerateMorningDependencies> = {},
-): Promise<Lesson> {
+): Promise<{
+  lesson: Lesson;
+  writeResult: Awaited<ReturnType<typeof writeLesson>>;
+}> {
   const deps = { ...defaultDependencies, ...dependencies };
   const progress = await readProgress();
   const topic = getTopicForDay(progress.nextDay);
   if (!topic) {
-    throw new Error(`课程大纲中不存在第 ${progress.nextDay} 天`);
+    throw new Error(
+      `课程大纲已结束：找不到第 ${progress.nextDay} 天内容，请扩展 content/curriculum.json 后再生成`,
+    );
   }
 
   let retryReasons: string[] | undefined;
@@ -157,5 +162,5 @@ export async function generateMorningLesson(
     await advanceProgress(progress);
   }
 
-  return finalLesson;
+  return { lesson: finalLesson, writeResult: result };
 }

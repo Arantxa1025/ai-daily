@@ -5,11 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import fallbackTopics from "../../content/fallback-topics.json";
 import { generateAfternoonLesson } from "./generateAfternoon";
 import { writeLesson } from "./lessonStore";
+import type { Lesson } from "./types";
 import { validateLesson } from "./validateLesson";
 
 function generatedHotspot({ introLength = 500 }: { introLength?: number } = {}) {
   return {
-    type: "hotspot",
+    type: "hotspot" as const,
     title: "一个值得关注的 AI 新进展",
     estimatedMinutes: 20,
     intro: "字".repeat(introLength),
@@ -60,7 +61,7 @@ describe("generateAfternoonLesson", () => {
     const lessonRoot = await fs.mkdtemp(path.join(os.tmpdir(), "afternoon-"));
     process.env.LESSON_ROOT = lessonRoot;
 
-    const lesson = await generateAfternoonLesson("2026-09-22", {
+    const { lesson, writeResult } = await generateAfternoonLesson("2026-09-22", {
       fetchCandidates: vi.fn().mockResolvedValue([]),
       chatJson,
       now: () => new Date("2026-09-22T09:30:00.000Z"),
@@ -70,6 +71,7 @@ describe("generateAfternoonLesson", () => {
     );
 
     expect(chatJson).not.toHaveBeenCalled();
+    expect(writeResult).toBe("written");
     expect(["fallback_classic", "fallback_tool"]).toContain(lesson.type);
     expect(lesson.disclaimer).toContain("公开信息");
     expect(validateLesson(lesson)).toEqual({ ok: true, reasons: [] });
@@ -78,14 +80,19 @@ describe("generateAfternoonLesson", () => {
   });
 
   it("LLM 失败时改用降级稿，而不是中断生成", async () => {
-    const lesson = await generateAfternoonLesson("2026-09-23", {
+    const { lesson, writeResult } = await generateAfternoonLesson("2026-09-23", {
       fetchCandidates: vi.fn().mockResolvedValue([
-        { title: "AI news", url: "https://example.com/ai-news" },
+        {
+          title: "AI news",
+          url: "https://example.com/ai-news",
+          publishedAt: "2026-09-23T08:00:00.000Z",
+        },
       ]),
       chatJson: vi.fn().mockRejectedValue(new Error("LLM unavailable")),
       writeLesson: vi.fn().mockResolvedValue("written"),
     });
 
+    expect(writeResult).toBe("written");
     expect(lesson.type).toMatch(/^fallback_(classic|tool)$/);
     expect(lesson.sources).toBeUndefined();
   });
@@ -95,7 +102,7 @@ describe("generateAfternoonLesson", () => {
     const lessonRoot = await fs.mkdtemp(path.join(os.tmpdir(), "afternoon-"));
     process.env.LESSON_ROOT = lessonRoot;
 
-    const lesson = await generateAfternoonLesson("2026-09-25", {
+    const { lesson } = await generateAfternoonLesson("2026-09-25", {
       fetchCandidates: vi.fn().mockRejectedValue(new Error("network down")),
       chatJson,
       now: () => new Date("2026-09-25T09:30:00.000Z"),
@@ -116,9 +123,13 @@ describe("generateAfternoonLesson", () => {
       .mockResolvedValueOnce({ type: "hotspot", title: "缺字段" })
       .mockResolvedValueOnce(generatedHotspot({ introLength: 100 }));
 
-    const lesson = await generateAfternoonLesson("2026-09-26", {
+    const { lesson } = await generateAfternoonLesson("2026-09-26", {
       fetchCandidates: vi.fn().mockResolvedValue([
-        { title: "AI news", url: "https://example.com/ai-news" },
+        {
+          title: "AI news",
+          url: "https://example.com/ai-news",
+          publishedAt: "2026-09-26T08:00:00.000Z",
+        },
       ]),
       chatJson,
       now: () => new Date("2026-09-26T09:30:00.000Z"),
@@ -150,8 +161,8 @@ describe("generateAfternoonLesson", () => {
       now: () => new Date("2026-09-28T09:30:00.000Z"),
     });
 
-    expect(first.title).toBe(fallbackTopics[0].title);
-    expect(second.title).toBe(fallbackTopics[1].title);
+    expect(first.lesson.title).toBe(fallbackTopics[0].title);
+    expect(second.lesson.title).toBe(fallbackTopics[1].title);
     expect(
       JSON.parse(await fs.readFile(path.join(contentRoot, "fallback-progress.json"), "utf-8")),
     ).toEqual({ nextIndex: 2 });
@@ -162,7 +173,7 @@ describe("generateAfternoonLesson", () => {
     const lessonRoot = await fs.mkdtemp(path.join(os.tmpdir(), "afternoon-"));
     process.env.LESSON_ROOT = lessonRoot;
     const date = "2026-09-29";
-    const existing = {
+    const existing: Lesson = {
       ...generatedHotspot(),
       date,
       slot: "afternoon" as const,
@@ -172,7 +183,7 @@ describe("generateAfternoonLesson", () => {
     await writeLesson(existing);
     const writeResults: string[] = [];
 
-    await generateAfternoonLesson(date, {
+    const { writeResult } = await generateAfternoonLesson(date, {
       fetchCandidates: vi.fn().mockResolvedValue([]),
       chatJson: vi.fn(),
       writeLesson: async (lesson) => {
@@ -183,6 +194,7 @@ describe("generateAfternoonLesson", () => {
       now: () => new Date("2026-09-29T09:30:00.000Z"),
     });
 
+    expect(writeResult).toBe("skipped_existing_ok");
     expect(writeResults).toEqual(["skipped_existing_ok"]);
     expect(
       JSON.parse(await fs.readFile(path.join(contentRoot, "fallback-progress.json"), "utf-8")),
@@ -198,14 +210,16 @@ describe("generateAfternoonLesson", () => {
       title: "AI news",
       url: "https://example.com/ai-news",
       summary: "A useful update",
+      publishedAt: "2026-09-24T08:00:00.000Z",
     };
-    const lesson = await generateAfternoonLesson("2026-09-24", {
+    const { lesson, writeResult } = await generateAfternoonLesson("2026-09-24", {
       fetchCandidates: vi.fn().mockResolvedValue([candidate]),
       chatJson: vi.fn().mockResolvedValue(generatedHotspot()),
       writeLesson: vi.fn().mockResolvedValue("written"),
       now: () => new Date("2026-09-24T09:30:00.000Z"),
     });
 
+    expect(writeResult).toBe("written");
     expect(lesson.type).toBe("hotspot");
     expect(lesson.status).toBe("ok");
     expect(lesson.sources).toEqual([{ title: candidate.title, url: candidate.url }]);

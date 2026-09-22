@@ -37,8 +37,11 @@ describe("cron generate route", () => {
   });
 
   it("generates the morning lesson using the Shanghai date", async () => {
-    const lesson = { slot: "morning", title: "基础课" };
-    generateMorningLesson.mockResolvedValue(lesson);
+    const lesson = { slot: "morning", title: "基础课", status: "ok" };
+    generateMorningLesson.mockResolvedValue({
+      lesson,
+      writeResult: "written",
+    });
 
     const response = await GET(request("morning", "test-secret"));
     const body = await response.json();
@@ -46,21 +49,32 @@ describe("cron generate route", () => {
     expect(response.status).toBe(200);
     expect(body).toEqual({
       ok: true,
-      writeResult: lesson,
+      slot: "morning",
+      writeResult: "written",
+      status: "ok",
       date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
     });
     expect(generateMorningLesson).toHaveBeenCalledWith(body.date);
   });
 
   it("supports POST and dispatches afternoon generation", async () => {
-    const lesson = { slot: "afternoon", title: "热点课" };
-    generateAfternoonLesson.mockResolvedValue(lesson);
+    const lesson = { slot: "afternoon", title: "热点课", status: "draft_quality" };
+    generateAfternoonLesson.mockResolvedValue({
+      lesson,
+      writeResult: "skipped_existing_ok",
+    });
 
     const response = await POST(request("afternoon", "test-secret"));
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.writeResult).toEqual(lesson);
+    expect(body).toEqual({
+      ok: true,
+      date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      slot: "afternoon",
+      writeResult: "skipped_existing_ok",
+      status: "draft_quality",
+    });
     expect(generateAfternoonLesson).toHaveBeenCalledWith(body.date);
   });
 });

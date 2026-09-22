@@ -98,7 +98,10 @@ function buildHotspotLesson(
 export async function generateAfternoonLesson(
   date: string,
   dependencies: Partial<GenerateAfternoonDependencies> = {},
-): Promise<Lesson> {
+): Promise<{
+  lesson: Lesson;
+  writeResult: Awaited<ReturnType<typeof writeLesson>>;
+}> {
   const deps = { ...defaultDependencies, ...dependencies };
   const createdAt = deps.now().toISOString();
   let candidates: HotspotCandidate[] = [];
@@ -124,8 +127,8 @@ export async function generateAfternoonLesson(
           retryReasons = validation.reasons;
           continue;
         }
-        await deps.writeLesson(lesson);
-        return lesson;
+        const writeResult = await deps.writeLesson(lesson);
+        return { lesson, writeResult };
       } catch {
         break;
       }
@@ -142,5 +145,5 @@ export async function generateAfternoonLesson(
   if (result === "written") {
     await advanceFallbackProgress(progress);
   }
-  return fallback;
+  return { lesson: fallback, writeResult: result };
 }

@@ -8,9 +8,11 @@ async function main(): Promise<void> {
     throw new Error("用法：npx tsx scripts/generate.ts <morning|afternoon>");
   }
   if (slot === "afternoon") {
-    const lesson = await generateAfternoonLesson(formatShanghaiDate(new Date()));
+    const { lesson, writeResult } = await generateAfternoonLesson(
+      formatShanghaiDate(new Date()),
+    );
     console.log(
-      `晚间课程已处理：${lesson.date}《${lesson.title}》，类型 ${lesson.type}，状态 ${lesson.status}`,
+      `晚间课程已处理：${lesson.date}《${lesson.title}》，类型 ${lesson.type}，状态 ${lesson.status}，写入结果 ${writeResult}`,
     );
     return;
   }
@@ -21,9 +23,11 @@ async function main(): Promise<void> {
     throw new Error("缺少 LLM_BASE_URL，请配置兼容 OpenAI 的接口地址");
   }
 
-  const lesson = await generateMorningLesson(formatShanghaiDate(new Date()));
+  const { lesson, writeResult } = await generateMorningLesson(
+    formatShanghaiDate(new Date()),
+  );
   console.log(
-    `早间课程已处理：${lesson.date} Day ${lesson.curriculumDay}《${lesson.title}》，状态 ${lesson.status}`,
+    `早间课程已处理：${lesson.date} Day ${lesson.curriculumDay}《${lesson.title}》，状态 ${lesson.status}，写入结果 ${writeResult}`,
   );
 }
 
