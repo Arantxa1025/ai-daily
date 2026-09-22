@@ -1,4 +1,5 @@
 import { generateMorningLesson } from "../src/lib/generateMorning";
+import { generateAfternoonLesson } from "../src/lib/generateAfternoon";
 import { formatShanghaiDate } from "../src/lib/time";
 
 async function main(): Promise<void> {
@@ -6,14 +7,18 @@ async function main(): Promise<void> {
   if (slot !== "morning" && slot !== "afternoon") {
     throw new Error("用法：npx tsx scripts/generate.ts <morning|afternoon>");
   }
+  if (slot === "afternoon") {
+    const lesson = await generateAfternoonLesson(formatShanghaiDate(new Date()));
+    console.log(
+      `晚间课程已处理：${lesson.date}《${lesson.title}》，类型 ${lesson.type}，状态 ${lesson.status}`,
+    );
+    return;
+  }
   if (!process.env.LLM_API_KEY) {
     throw new Error("缺少 LLM_API_KEY，请先配置大模型 API 密钥后再生成课程");
   }
   if (!process.env.LLM_BASE_URL) {
     throw new Error("缺少 LLM_BASE_URL，请配置兼容 OpenAI 的接口地址");
-  }
-  if (slot === "afternoon") {
-    throw new Error("下午热点生成将在后续任务中实现，目前请使用 morning");
   }
 
   const lesson = await generateMorningLesson(formatShanghaiDate(new Date()));
