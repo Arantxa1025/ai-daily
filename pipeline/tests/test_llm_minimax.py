@@ -72,6 +72,17 @@ some trailing notes }
     assert _parse_json_content(content) == {"title": "world", "ok": True}
 
 
+def test_parse_json_repairs_unescaped_quotes_inside_strings():
+    # Classic LLM glitch: Chinese text with raw " inside a JSON string.
+    content = (
+        '{"type":"basics","title":"第1天","intro":"把AI这层"神秘面纱"揭开。",'
+        '"estimatedMinutes":12,"sections":[],"quiz":[],"takeaway":"ok"}'
+    )
+    parsed = _parse_json_content(content)
+    assert parsed["title"] == "第1天"
+    assert "神秘面纱" in parsed["intro"]
+
+
 def test_chat_json_retries_without_thinking_when_rejected(env_with_key):
     calls = []
 
@@ -90,3 +101,37 @@ def test_chat_json_retries_without_thinking_when_rejected(env_with_key):
     assert result == {"title": "ok"}
     assert len(calls) == 2
     assert "thinking" not in calls[1]
+
+
+def test_chat_json_repair_round_on_broken_json(env_with_key):
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content.decode())
+        calls.append(body)
+        if len(calls) == 1:
+            # Unrecoverable enough that repair_json alone may not always
+            # produce a dict we trust — still exercise the second API call path
+            # by returning something empty of braces first... use broken then fixed.
+            return httpx.Response(
+                200,
+                json={
+                    "choices": [
+                        {
+                            "message": {
+                                "content": "NOT JSON AT ALL please fix me",
+                            }
+                        }
+                    ]
+                },
+            )
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": '{"title": "fixed"}'}}]},
+        )
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    result = chat_json("s", "u", client=client)
+    assert result == {"title": "fixed"}
+    assert len(calls) == 2
+    assert "不是合法 JSON" in calls[1]["messages"][1]["content"]

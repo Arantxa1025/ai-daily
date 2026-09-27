@@ -16,7 +16,8 @@ SYSTEM_PROMPT = """你是面向 AI 零基础学习者的课程作者。
 输出严格 JSON，不要 Markdown，不要额外说明。字段必须是：
 type（固定 basics）、title、estimatedMinutes、intro、sections、quiz、takeaway。
 sections 必须有 3～4 个，每项含 heading、body；quiz 必须有 2～3 题，每题含 question、options、answerIndex、explanation。
-正文总长度（intro 加小节标题和正文）控制在 1500～2500 个字符。"""
+正文总长度（intro 加小节标题和正文）控制在 1500～2500 个字符。
+字符串值里若需引号，一律用中文「」或『』，禁止使用英文双引号，以免破坏 JSON。"""
 
 
 def _valid_generated(value: dict) -> bool:
@@ -119,7 +120,11 @@ def generate_morning(
     retry_reasons: list[str] | None = None
     final_lesson: Lesson | None = None
     for _attempt in range(2):
-        raw = chat_json(SYSTEM_PROMPT, _user_prompt(topic, retry_reasons))
+        try:
+            raw = chat_json(SYSTEM_PROMPT, _user_prompt(topic, retry_reasons))
+        except ValueError as exc:
+            retry_reasons = [f"JSON 解析失败：{exc}"]
+            continue
         if not _valid_generated(raw):
             retry_reasons = ["返回的 JSON 字段或结构不符合要求"]
             continue

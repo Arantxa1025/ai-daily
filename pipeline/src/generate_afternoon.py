@@ -22,9 +22,10 @@ SYSTEM_PROMPT = """你是面向 AI 零基础学习者的热点课程作者。
 所有术语都要紧跟人话解释；只使用候选资讯中的事实，不得补写无来源的信息。
 输出严格 JSON，不要 Markdown，不要额外说明。字段必须是：
 type（固定 hotspot）、title、estimatedMinutes、intro、sections、quiz、takeaway、disclaimer、sourceIndexes。
-sections 必须有 3～4 个，覆盖“发生了什么、为什么火、和普通人有什么关系”；quiz 必须有 2～3 题。
-disclaimer 必须是“根据公开信息整理，非投资/内幕建议。”。
-正文总长度（intro 加小节标题和正文）控制在 1500～2500 个字符。"""
+sections 必须有 3～4 个，覆盖「发生了什么、为什么火、和普通人有什么关系」；quiz 必须有 2～3 题。
+disclaimer 必须是「根据公开信息整理，非投资/内幕建议。」。
+正文总长度（intro 加小节标题和正文）控制在 1500～2500 个字符。
+字符串值里若需引号，一律用中文「」或『』，禁止使用英文双引号，以免破坏 JSON。"""
 
 
 def _valid_generated(value: dict) -> bool:
@@ -161,6 +162,9 @@ def generate_afternoon(
         for _attempt in range(2):
             try:
                 raw = chat_json(SYSTEM_PROMPT, _user_prompt(candidates, retry_reasons))
+            except ValueError as exc:
+                retry_reasons = [f"JSON 解析失败：{exc}"]
+                continue
             except Exception:
                 break
             if not _valid_generated(raw):
