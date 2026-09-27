@@ -101,7 +101,9 @@
 - 首页可汇总展示「今日合计约 X 分钟」。
 - JSON 解析继续使用现有 MiniMax 修复 / 重试策略。
 
-### 配置扩展（建议写入 `sources.yaml` 或旁路 `pipeline/config/generation.yaml`）
+### 配置扩展
+
+统一写入 `pipeline/config/generation.yaml`（与 `sources.yaml` 分离）：
 
 ```yaml
 slots:
@@ -113,8 +115,11 @@ slots:
     max_extension_lessons: 2
 concept_bank:
   path: ai-daily/content/concept-bank.json
+  progress_path: ai-daily/content/concept-bank-progress.json
   recent_dedupe_days: 14
 ```
+
+词库进度文件形状：`{ "nextIndex": 0 }`，仅在「无新闻、从词库成功写出概念篇」时递增。
 
 ## 5. 前端展示
 
